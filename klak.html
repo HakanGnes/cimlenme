@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fasulye Deneyi: Bitki Boyu Tahmin Modeli</title>
+  <meta name="viewport" content="width=900, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Quicksand', Arial, sans-serif; background: #f9f6ed; margin: 0; padding: 0; }
+    .container { max-width: 900px; margin: 40px auto; padding: 32px; background: #fff; border-radius: 24px; box-shadow: 0 4px 20px #bbb3; }
+    h1 { font-size: 2em; margin-bottom: 12px; }
+    table { border-collapse: collapse; width: 100%; background: #f4f8fb; border-radius: 14px; overflow: hidden; }
+    th, td { padding: 8px 8px; text-align: center; border-bottom: 1px solid #e2e2e2; }
+    th { background: #2368b8; color: #fff; }
+    tr:last-child td { border-bottom: none; }
+    button { background: #2368b8; color: #fff; border: none; border-radius: 10px; padding: 10px 24px; font-size: 1.1em; cursor: pointer; margin-top: 24px; }
+    .output { margin-top: 30px; }
+    .chart-container { width: 100%; max-width: 480px; margin: 22px auto; }
+    .info { background: #eaf3fb; padding: 16px; border-radius: 10px; margin-bottom: 24px; }
+    input[type="number"] { width: 70px; padding: 3px 5px; border-radius: 6px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Fasulye Deneyi: Bitki Boyu Tahmini</h1>
+    <div class="info">
+      10 gün boyunca tohumun gelişimini gözlemledin!<br>
+      <b>Nem ve hava kalitesi, saf sensör değeri olarak girilmelidir.</b><br>
+      Tabloyu doldur, <b>Modeli Eğit</b> butonuna bas.<br>
+      <b>Tahmin sütunu</b> otomatik dolacak, sonucu karşılaştır!
+    </div>
+    <form id="data-form">
+      <table id="input-table">
+        <tr>
+          <th>Gün</th>
+          <th>Sıcaklık (°C)</th>
+          <th>Nem (saf değer)</th>
+          <th>Hava Kalitesi (saf değer)</th>
+          <th>Işık (lux)</th>
+          <th>Boy (cm) <br><span style="font-weight:normal;font-size:0.9em;">(Gerçek Değer)</span></th>
+          <th>Tahmin Boy (cm)</th>
+        </tr>
+        <!-- JS ile doldurulacak -->
+      </table>
+      <button type="button" onclick="trainModel()">Modeli Eğit</button>
+    </form>
+    <div class="output" id="output"></div>
+    <div class="chart-container">
+      <canvas id="resultsChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <canvas id="importanceChart"></canvas>
+    </div>
+  </div>
+
+<script>
+  // Tabloyu otomatik 10 gün doldur
+  const table = document.getElementById("input-table");
+  for (let i = 1; i <= 10; i++) {
+    let row = table.insertRow();
+    row.innerHTML =
+      `<td>${i}</td>` +
+      `<td><input type="number" step="0.1" required></td>` + // Sıcaklık
+      `<td><input type="number" step="1" required></td>` +   // Nem (saf değer)
+      `<td><input type="number" step="1" required></td>` +   // Hava Kalitesi (saf değer)
+      `<td><input type="number" step="1" required></td>` +   // Işık
+      `<td><input type="number" step="0.01" required></td>` + // Gerçek Boy
+      `<td class="prediction"></td>`; // Tahmin Boy
+  }
+
+  function getTableData() {
+    let X = [], y = [];
+    // İlk satır header, 2. satırdan başlar
+    for (let i = 1; i <= 10; i++) {
+      let cells = table.rows[i].cells;
+      let sicaklik = parseFloat(cells[1].children[0].value);
+      let nem = parseFloat(cells[2].children[0].value);
+      let hava = parseFloat(cells[3].children[0].value);
+      let isik = parseFloat(cells[4].children[0].value);
+      let boy = parseFloat(cells[5].children[0].value);
+      if(
+        isNaN(sicaklik)||isNaN(nem)||isNaN(hava)||isNaN(isik)||isNaN(boy)
+      ) return null; // Veri eksikse
+      X.push([sicaklik, nem, hava, isik]);
+      y.push(boy);
+    }
+    return {X, y};
+  }
+
+  // Basit çoklu doğrusal regresyon
+  function linearRegression(X, y) {
+    let X_b = X.map(row => [1, ...row]);
+    let XT = math.transpose(X_b);
+    let XTX = math.multiply(XT, X_b);
+    let XTy = math.multiply(XT, y);
+    let w = math.lusolve(XTX, XTy).map(row => row[0]); // ağırlıklar
+    let y_pred = X_b.map(row => row.reduce((s,v,idx) => s+v*w[idx], 0));
+    return {w, y_pred};
+  }
+
+  function trainModel() {
+    const {X, y} = getTableData() || {};
+    if (!X || !y) {
+      alert("Lütfen tüm tabloyu doldurun!");
+      return;
+    }
+    // math.js kütüphanesi yüklü mü?
+    if (typeof math === "undefined") {
+      let script = document.createElement('script');
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.js";
+      script.onload = () => trainModel();
+      document.body.appendChild(script);
+      return;
+    }
+    const {w, y_pred} = linearRegression(X, y);
+
+    // Tahminleri tabloya yaz
+    for (let i = 1; i <= 10; i++) {
+      let pred = y_pred[i-1];
+      let predCell = table.rows[i].cells[6];
+      predCell.textContent = pred.toFixed(2);
+    }
+
+    // R2 doğruluk
+    let meanY = y.reduce((a,b) => a+b,0)/y.length;
+    let ss_tot = y.reduce((s,yi) => s + Math.pow(yi-meanY,2), 0);
+    let ss_res = y.reduce((s,yi,i) => s + Math.pow(yi-y_pred[i],2), 0);
+    let r2 = 1 - ss_res/ss_tot;
+
+    // Özellik önemleri
+    let importances = w.slice(1).map(Math.abs);
+    let sumImp = importances.reduce((a,b)=>a+b,0);
+    let normImportances = importances.map(x=>x/sumImp);
+
+    // Sonuçlar
+    let out = `<b>Model Doğruluğu (R²):</b> ${r2.toFixed(2)}<br>
+    <b>Değişken Önemleri:</b>
+    <ul>
+      <li>Sıcaklık: ${(normImportances[0]*100).toFixed(1)}%</li>
+      <li>Nem: ${(normImportances[1]*100).toFixed(1)}%</li>
+      <li>Hava Kalitesi: ${(normImportances[2]*100).toFixed(1)}%</li>
+      <li>Işık: ${(normImportances[3]*100).toFixed(1)}%</li>
+    </ul>`;
+    document.getElementById("output").innerHTML = out;
+
+    showResultsChart(y, y_pred);
+    showImportanceChart(normImportances);
+  }
+
+  // Sonuç grafiği
+  function showResultsChart(y, y_pred) {
+    const ctx = document.getElementById('resultsChart').getContext('2d');
+    if(window.resultsChartObj){window.resultsChartObj.destroy();}
+    window.resultsChartObj = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: Array.from({length: y.length}, (_,i)=>`Gün ${i+1}`),
+        datasets: [
+          {label: 'Gerçek Boy', data: y, borderWidth: 2, fill: false},
+          {label: 'Tahmin Boy', data: y_pred, borderDash: [8,6], borderWidth: 2, fill: false}
+        ]
+      },
+      options: {
+        plugins: {legend:{position:'top'}},
+        scales: {y:{beginAtZero:true}}
+      }
+    });
+  }
+
+  // Değişken önemleri grafiği
+  function showImportanceChart(importances) {
+    const ctx = document.getElementById('importanceChart').getContext('2d');
+    if(window.importanceChartObj){window.importanceChartObj.destroy();}
+    window.importanceChartObj = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık"],
+        datasets: [{
+          label: 'Değişkenin Etkisi (%)',
+          data: importances.map(x=>x*100),
+        }]
+      },
+      options: {
+        plugins: {legend: {display: false}},
+        scales: {y: {beginAtZero: true, max: 100}}
+      }
+    });
+  }
+</script>
+</body>
+</html>
+
+
