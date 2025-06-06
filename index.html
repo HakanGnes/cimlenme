@@ -3,21 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <title>Fasulye Deneyi: Bitki Boyu Tahmin Modeli</title>
-  <meta name="viewport" content="width=900, initial-scale=1">
+  <meta name="viewport" content="width=720, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: 'Quicksand', Arial, sans-serif; background: #f9f6ed; margin: 0; padding: 0; }
-    .container { max-width: 900px; margin: 40px auto; padding: 32px; background: #fff; border-radius: 24px; box-shadow: 0 4px 20px #bbb3; }
-    h1 { font-size: 2em; margin-bottom: 12px; }
-    table { border-collapse: collapse; width: 100%; background: #f4f8fb; border-radius: 14px; overflow: hidden; }
-    th, td { padding: 8px 8px; text-align: center; border-bottom: 1px solid #e2e2e2; }
-    th { background: #2368b8; color: #fff; }
+    html, body {
+      width: 720px;
+      height: 540px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f9f6ed;
+    }
+    body {
+      min-width: 720px;
+      min-height: 540px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      width: 720px;
+      height: 540px;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 20px 16px 10px 16px;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 4px 20px #bbb3;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    h1 {
+      font-size: 1.4em;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .info {
+      background: #eaf3fb;
+      padding: 8px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      font-size: 1em;
+      text-align: center;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: #f4f8fb;
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 0.98em;
+    }
+    th, td {
+      padding: 3px 5px;
+      text-align: center;
+      border-bottom: 1px solid #e2e2e2;
+      font-size: 0.96em;
+    }
+    th {
+      background: #2368b8;
+      color: #fff;
+      font-weight: 700;
+    }
     tr:last-child td { border-bottom: none; }
-    button { background: #2368b8; color: #fff; border: none; border-radius: 10px; padding: 10px 24px; font-size: 1.1em; cursor: pointer; margin-top: 24px; }
-    .output { margin-top: 30px; }
-    .chart-container { width: 100%; max-width: 480px; margin: 22px auto; }
-    .info { background: #eaf3fb; padding: 16px; border-radius: 10px; margin-bottom: 24px; }
-    input[type="number"] { width: 70px; padding: 3px 5px; border-radius: 6px; border: 1px solid #ddd; }
+    button {
+      background: #2368b8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 6px 20px;
+      font-size: 1.05em;
+      cursor: pointer;
+      margin: 10px auto 0 auto;
+      display: block;
+    }
+    .output {
+      margin-top: 5px;
+      font-size: 1em;
+      text-align: left;
+    }
+    .chart-container {
+      width: 49%;
+      height: 110px;
+      display: inline-block;
+      vertical-align: top;
+      margin: 5px 0 0 0;
+    }
+    #resultsChart, #importanceChart {
+      width: 100% !important;
+      height: 110px !important;
+      max-width: 100%;
+      background: #fff;
+    }
+    input[type="number"] {
+      width: 58px;
+      padding: 2px 3px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      font-size: 0.98em;
+    }
+    @media (max-width: 720px) {
+      html, body, .container { width: 100vw !important; }
+    }
   </style>
 </head>
 <body>
@@ -37,19 +125,17 @@
           <th>Nem (saf değer)</th>
           <th>Hava Kalitesi (saf değer)</th>
           <th>Işık (lux)</th>
-          <th>Boy (cm) <br><span style="font-weight:normal;font-size:0.9em;">(Gerçek Değer)</span></th>
-          <th>Tahmin Boy (cm)</th>
+          <th>Boy (cm)<br><span style="font-weight:normal;font-size:0.9em;">(Gerçek)</span></th>
+          <th>Tahmin<br>Boy (cm)</th>
         </tr>
         <!-- JS ile doldurulacak -->
       </table>
       <button type="button" onclick="trainModel()">Modeli Eğit</button>
     </form>
     <div class="output" id="output"></div>
-    <div class="chart-container">
-      <canvas id="resultsChart"></canvas>
-    </div>
-    <div class="chart-container">
-      <canvas id="importanceChart"></canvas>
+    <div style="width:100%; display:flex; justify-content:space-between;">
+      <div class="chart-container"><canvas id="resultsChart"></canvas></div>
+      <div class="chart-container"><canvas id="importanceChart"></canvas></div>
     </div>
   </div>
 
@@ -70,7 +156,6 @@
 
   function getTableData() {
     let X = [], y = [];
-    // İlk satır header, 2. satırdan başlar
     for (let i = 1; i <= 10; i++) {
       let cells = table.rows[i].cells;
       let sicaklik = parseFloat(cells[1].children[0].value);
@@ -80,7 +165,7 @@
       let boy = parseFloat(cells[5].children[0].value);
       if(
         isNaN(sicaklik)||isNaN(nem)||isNaN(hava)||isNaN(isik)||isNaN(boy)
-      ) return null; // Veri eksikse
+      ) return null;
       X.push([sicaklik, nem, hava, isik]);
       y.push(boy);
     }
@@ -93,7 +178,7 @@
     let XT = math.transpose(X_b);
     let XTX = math.multiply(XT, X_b);
     let XTy = math.multiply(XT, y);
-    let w = math.lusolve(XTX, XTy).map(row => row[0]); // ağırlıklar
+    let w = math.lusolve(XTX, XTy).map(row => row[0]);
     let y_pred = X_b.map(row => row.reduce((s,v,idx) => s+v*w[idx], 0));
     return {w, y_pred};
   }
@@ -104,7 +189,7 @@
       alert("Lütfen tüm tabloyu doldurun!");
       return;
     }
-    // math.js kütüphanesi yüklü mü?
+    // math.js yüklü mü?
     if (typeof math === "undefined") {
       let script = document.createElement('script');
       script.src = "https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.js";
@@ -189,5 +274,6 @@
 </script>
 </body>
 </html>
+
 
 
