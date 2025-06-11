@@ -2,145 +2,40 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Fasulye Deneyi: Bitki Boyu Tahmin Modeli</title>
+  <title>Fasulye Deneyi | Bitki Boyu Tahmin Modeli</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.js"></script>
   <style>
     /* === Temel Yerleşim === */
-    html, body {
-      width: 100vw;
-      height: 100vh;
-      margin: 0;
-      padding: 0;
-      background: #f9f6ed;
+    html, body{
+      width:100vw;height:100vh;margin:0;padding:0;background:#f9f6ed;
+      display:flex;align-items:center;justify-content:center;overflow:hidden;
+      min-width:720px;min-height:540px;
     }
-    body {
-      display: flex;
-      align-items: center;   /* Dikey ortalama */
-      justify-content: center; /* Yatay ortalama */
-      overflow: hidden;      /* Scroll bar yok */
-      min-width: 720px;
-      min-height: 540px;
-    }
-
     /* === Uygulama Kutusu === */
-    .container {
-      width: 720px;
-      height: 540px;
-      box-sizing: border-box;
-      padding: 20px 16px 10px 16px;
-      background: #fff;
-      border-radius: 24px;
-      box-shadow: 0 4px 20px #bbb3;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      overflow: hidden; /* Scrollsuz içerik */
+    .container{
+      width:720px;height:540px;background:#fff;border-radius:24px;
+      padding:20px 16px 10px 16px;box-shadow:0 4px 20px #bbb3;
+      display:flex;flex-direction:column;overflow:hidden;
     }
-
     /* === Metin & Tablolar === */
-    h1 {
-      font-size: 1.4em;
-      margin: 0 0 10px 0;
-      text-align: center;
-    }
-    .info {
-      background: #eaf3fb;
-      padding: 8px 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      font-size: 1em;
-      text-align: center;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background: #f4f8fb;
-      border-radius: 10px;
-      overflow: hidden;
-      font-size: 0.98em;
-    }
-    th, td {
-      padding: 3px 5px;
-      text-align: center;
-      border-bottom: 1px solid #e2e2e2;
-      font-size: 0.96em;
-    }
-    th {
-      background: #2368b8;
-      color: #fff;
-      font-weight: 700;
-    }
-    tr:last-child td { border-bottom: none; }
-
-    button {
-      background: #2368b8;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 6px 20px;
-      font-size: 1.05em;
-      cursor: pointer;
-      margin: 10px auto 0 auto;
-      display: block;
-    }
-
-    .output, .analysis {
-      margin-top: 6px;
-      font-size: 0.98em;
-      text-align: left;
-      max-height: 60px;
-      overflow: auto;
-    }
-
+    h1{font-size:1.4em;margin:0 0 10px;text-align:center}
+    .info{background:#eaf3fb;padding:8px 12px;border-radius:10px;margin-bottom:10px;text-align:center}
+    table{border-collapse:collapse;width:100%;background:#f4f8fb;border-radius:10px;font-size:0.96em}
+    th,td{padding:3px 5px;text-align:center;border-bottom:1px solid #e2e2e2}
+    th{background:#2368b8;color:#fff;font-weight:700}
+    tr:last-child td{border-bottom:none}
+    input[type="number"]{width:60px;padding:2px 3px;border-radius:6px;border:1px solid #ddd}
+    button{background:#2368b8;color:#fff;border:none;border-radius:10px;padding:6px 20px;font-size:1.05em;cursor:pointer;margin:10px auto 0}
+    .output,.analysis{margin-top:6px;font-size:0.98em;max-height:60px;overflow:auto;text-align:left}
     /* === Grafikler === */
-    .chart-container {
-      width: 49%;
-      height: 80px;
-      display: inline-block;
-      vertical-align: top;
-      margin: 4px 0 0 0;
-    }
-    #resultsChart, #importanceChart, #vizChart {
-      width: 100% !important;
-      height: 80px !important;
-      max-width: 100%;
-      background: #fff;
-    }
-
-    input[type="number"] {
-      width: 58px;
-      padding: 2px 3px;
-      border-radius: 6px;
-      border: 1px solid #ddd;
-      font-size: 0.96em;
-    }
-
+    .chart-container{width:49%;height:80px;display:inline-block;margin-top:4px;vertical-align:top}
+    #resultsChart,#importanceChart,#vizChart{width:100%!important;height:80px!important}
     /* === Görselleştirme Kontrolleri === */
-    .viz-controls {
-      margin-top: 8px;
-      background: #f4f8fb;
-      padding: 6px 8px;
-      border-radius: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 12px;
-      align-items: center;
-      justify-content: flex-start;
-      font-size: 0.95em;
-    }
-    .viz-controls label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    select {
-      border-radius: 6px;
-      border: 1px solid #ddd;
-      padding: 2px 4px;
-      font-size: 0.95em;
-    }
+    .viz-controls{margin-top:8px;background:#f4f8fb;padding:6px 8px;border-radius:10px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+    .viz-controls label{display:flex;align-items:center;gap:4px}
+    select{border-radius:6px;border:1px solid #ddd;padding:2px 4px;font-size:0.95em}
   </style>
 </head>
 <body>
@@ -149,7 +44,7 @@
     <div class="info">
       10 gün boyunca tohumun gelişimini gözlemledin!<br>
       Tabloyu doldur, <b>Tahmin Et</b> butonuna bas.<br>
-      <b>Tahmin sütunu</b> otomatik dolacak, sonucu karşılaştır!
+      <b>Tahmin</b> sütunu otomatik dolacak, sonucu karşılaştır!
     </div>
 
     <!-- ===== Veri Girişi ===== -->
@@ -161,34 +56,42 @@
           <th>Nem</th>
           <th>Hava Kalitesi</th>
           <th>Işık (lux)</th>
-          <th>Boy (cm)<br><span style="font-weight:normal;font-size:0.9em;">(Gerçek)</span></th>
+          <th>Boy (cm)<br><span style="font-weight:normal;font-size:0.9em">(Gerçek)</span></th>
           <th>Tahmin<br>Boy (cm)</th>
         </tr>
-        <!-- JavaScript ile satırlar eklenir -->
+        <!-- 10 sabit satır -->
+        <!-- Gün 1-10 -->
+        <!-- Her input “required” olduğu için boş bırakılırsa uyarı verir -->
+        <tr><td>1</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>2</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>3</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>4</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>5</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>6</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>7</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>8</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>9</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
+        <tr><td>10</td><td><input type="number" step="0.1" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" required></td><td><input type="number" step="0.01" required></td><td class="prediction"></td></tr>
       </table>
       <button type="button" onclick="predictHeights()">Tahmin Et</button>
     </form>
 
+    <!-- Model sonucu -->
+    <div id="output" class="output"></div>
     <button type="button" onclick="showAnalysis()">Analizi Göster</button>
-
-    <!-- Analiz Sonuçları -->
-    <div class="analysis" id="analysis"></div>
+    <div id="analysis" class="analysis"></div>
 
     <!-- Ana Grafikler -->
-    <div style="width:100%; display:flex; justify-content:space-between; margin-top:2px;">
+    <div style="width:100%;display:flex;justify-content:space-between">
       <div class="chart-container"><canvas id="resultsChart"></canvas></div>
       <div class="chart-container"><canvas id="importanceChart"></canvas></div>
     </div>
 
-    <!-- Görselleştirme Kontrolleri -->
+    <!-- Özel Grafik Kontrolleri -->
     <div class="viz-controls">
-      <label>Değişken 1:
-        <select id="var1"></select>
-      </label>
-      <label>Değişken 2 (isteğe bağlı):
-        <select id="var2"><option value="">Yok</option></select>
-      </label>
-      <label>Grafik Tipi:
+      <label>Değişken 1: <select id="var1"></select></label>
+      <label>Değişken 2 (isteğe bağlı): <select id="var2"><option value="">Yok</option></select></label>
+      <label>Grafik Tipi: 
         <select id="chartType">
           <option value="line">Çizgi</option>
           <option value="bar">Sütun</option>
@@ -200,253 +103,192 @@
   </div>
 
 <script>
-  /*********************
-   * GLOBAL DEĞİŞKENLER
-   *********************/
-  const variableNames = ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık", "Boy"];
-  const table = document.getElementById("input-table");
-  let baseWeights = [];
+/******************** 1. MODEL EĞİTİMİ ********************/
+const trainData = [
+  {t:22.5,h:55,aq:140,l:450,ht:2.0},
+  {t:23.0,h:58,aq:150,l:460,ht:2.3},
+  {t:24.2,h:60,aq:160,l:480,ht:2.9},
+  {t:24.8,h:62,aq:165,l:500,ht:3.4},
+  {t:25.1,h:65,aq:170,l:520,ht:4.0},
+  {t:25.5,h:67,aq:180,l:550,ht:4.7},
+  {t:26.0,h:68,aq:185,l:570,ht:5.4},
+  {t:26.4,h:70,aq:190,l:600,ht:6.1},
+  {t:26.9,h:72,aq:200,l:620,ht:6.6},
+  {t:27.4,h:74,aq:210,l:650,ht:7.0}
+];
 
-  /************************
-   * 1. TABLOYU DOLDUR
-   ************************/
-  for (let i = 1; i <= 10; i++) {
-    const row = table.insertRow();
-    row.innerHTML =
-      `<td>${i}</td>` +
-      `<td><input type="number" step="0.1" required></td>` +
-      `<td><input type="number" step="1" required></td>` +   // Nem
-      `<td><input type="number" step="1" required></td>` +   // Hava Kalitesi
-      `<td><input type="number" step="1" required></td>` +   // Işık
-      `<td><input type="number" step="0.01" required></td>` + // Gerçek Boy
-      `<td class="prediction"></td>`; // Tahmin Boy
-  }
+const variableNames = ["Sıcaklık","Nem","Hava Kalitesi","Işık","Boy"];
+let baseWeights = [];
 
-  /************************
-   * 2. MODELİ ÖNCEDEN EĞİT
-   ************************/
-  const trainData = [
-    {t:22.5,h:55,aq:140,l:450,ht:2.0},
-    {t:23.0,h:58,aq:150,l:460,ht:2.3},
-    {t:24.2,h:60,aq:160,l:480,ht:2.9},
-    {t:24.8,h:62,aq:165,l:500,ht:3.4},
-    {t:25.1,h:65,aq:170,l:520,ht:4.0},
-    {t:25.5,h:67,aq:180,l:550,ht:4.7},
-    {t:26.0,h:68,aq:185,l:570,ht:5.4},
-    {t:26.4,h:70,aq:190,l:600,ht:6.1},
-    {t:26.9,h:72,aq:200,l:620,
+/* --- doğrusal regresyon --- */
+function linearRegression(X,y){
+  const X_b = X.map(r=>[1,...r]);
+  const XT = math.transpose(X_b);
+  const w  = math.multiply(
+              math.inv(math.multiply(XT,X_b)),
+              math.multiply(XT,y)
+            );
+  return w;           // [b0,b1,b2,b3,b4]
+}
+function prepareTrainingArrays(data){
+  return {
+    X:data.map(d=>[d.t,d.h,d.aq,d.l]),
+    y:data.map(d=>d.ht)
+  };
+}
+function trainBaseModel(){
+  const {X,y}=prepareTrainingArrays(trainData);
+  baseWeights = linearRegression(X,y);
+}
 
-
-  // Çoklu doğrusal regresyon (Normal denklemler)
-  function linearRegression(X, y) {
-    const X_b = X.map(r => [1, ...r]);
-    const XT = math.transpose(X_b);
-    const XTX = math.multiply(XT, X_b);
-    const XTy = math.multiply(XT, y);
-    const w = math.lusolve(XTX, XTy).map(r => r[0]);
-    return w; // [b0, b1, b2, b3, b4]
-  }
-
-  function prepareTrainingArrays(data) {
-    const X = data.map(d => [d.t, d.h, d.aq, d.l]);
-    const y = data.map(d => d.ht);
-    return {X, y};
-  }
-
-  function trainBaseModel() {
-    const {X, y} = prepareTrainingArrays(trainData);
-    baseWeights = linearRegression(X, y);
-  }
-
-  /************************
-   * 3. TAHMİN İŞLEVİ
-   ************************/
-  function getTableData(includePred=false) {
-    const X = [], y = [];
-    for (let i = 1; i <= 10; i++) {
-      const cells = table.rows[i].cells;
-      const rowValues = [
-        parseFloat(cells[1].children[0].value), // temp
-        parseFloat(cells[2].children[0].value), // humidity
-        parseFloat(cells[3].children[0].value), // air quality
-        parseFloat(cells[4].children[0].value)  // light
-      ];
-      const height = parseFloat(cells[5].children[0].value);
-      if (rowValues.some(v => isNaN(v)) || isNaN(height)) return null;
-      X.push(rowValues);
-      y.push(height);
-    }
-    return {X, y};
-  }
-
-  function predictHeights() {
-    if (!baseWeights.length) {
-      alert("Model henüz eğitilmedi!");
-      return;
-    }
-    const data = getTableData();
-    if (!data) {
-      alert("Lütfen tüm tabloyu doldurun!");
-      return;
-    }
-    const {X, y} = data;
-    const y_pred = X.map(r => [1, ...r].reduce((s,v,i) => s + v * baseWeights[i], 0));
-
-    // Tahminleri tabloya yaz
-    for (let i = 1; i <= 10; i++) {
-      const pred = y_pred[i-1];
-      table.rows[i].cells[6].textContent = pred.toFixed(2);
-    }
-
-    // R^2 hesapla
-    const meanY = y.reduce((a,b) => a+b,0)/y.length;
-    const ss_tot = y.reduce((s,yi) => s + Math.pow(yi-meanY,2), 0);
-    const ss_res = y.reduce((s,yi,i) => s + Math.pow(yi - y_pred[i],2), 0);
-    const r2 = 1 - ss_res/ss_tot;
-
-    // Değişken önemleri
-    const importances = baseWeights.slice(1).map(Math.abs);
-    const sumImp = importances.reduce((a,b) => a+b, 0);
-    const normImp = importances.map(x => x / sumImp);
-
-    // Sonuçları göster
-    document.getElementById("output").innerHTML =
-      `<b>Model Doğruluğu (R²):</b> ${r2.toFixed(2)}`;
-
-    drawBaseCharts(y, y_pred, normImp);
-  }
-
-  function drawBaseCharts(y, y_pred, importances) {
-    // Sonuç çizgi grafiği
-    const ctx1 = document.getElementById('resultsChart').getContext('2d');
-    if (window.resultsChartObj) window.resultsChartObj.destroy();
-    window.resultsChartObj = new Chart(ctx1, {
-      type: 'line',
-      data: {
-        labels: Array.from({length: y.length}, (_,i)=>`Gün ${i+1}`),
-        datasets: [
-          {label: 'Gerçek Boy', data: y, borderWidth: 2, fill: false},
-          {label: 'Tahmin Boy', data: y_pred, borderDash: [8,6], borderWidth: 2, fill: false}
-        ]
-      },
-      options: {
-        plugins: {legend:{position:'top'}},
-        scales: {y:{beginAtZero:true}}
-      }
-    });
-
-    // Özellik önemleri çubuk grafiği
-    const ctx2 = document.getElementById('importanceChart').getContext('2d');
-    if (window.importanceChartObj) window.importanceChartObj.destroy();
-    window.importanceChartObj = new Chart(ctx2, {
-      type: 'bar',
-      data: {
-        labels: ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık"],
-        datasets: [{label: 'Değişkenin Etkisi (%)', data: importances.map(x=>x*100)}]
-      },
-      options: {
-        plugins: {legend: {display: false}},
-        scales: {y: {beginAtZero: true, max: 100}}
-      }
-    });
-  }
-
-  /**********************
-   * 4. ANALİZ FONKSİYONU
-   **********************/
-  function calcStats(arr) {
-    const sorted = [...arr].sort((a,b)=>a-b);
-    const min = sorted[0];
-    const max = sorted[sorted.length-1];
-    const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
-    const median = sorted.length % 2 === 0 ? (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2 : sorted[Math.floor(sorted.length/2)];
-    const freq = {};
-    arr.forEach(x => freq[x] = (freq[x]||0)+1);
-    const maxFreq = Math.max(...Object.values(freq));
-    const modes = Object.keys(freq).filter(k => freq[k] === maxFreq).map(Number);
-    return {min, max, mean, median, mode: modes.join(', ')};
-  }
-
-  function showAnalysis() {
-    const data = getTableData();
-    if (!data) {
-      alert("Önce tabloyu doldurun!");
-      return;
-    }
-    const {X, y} = data;
-    const allVars = [
-      X.map(r=>r[0]), // temp
-      X.map(r=>r[1]), // humidity
-      X.map(r=>r[2]), // air quality
-      X.map(r=>r[3]), // light
-      y               // height
+/******************** 2. TABLO VERİSİ OKUMA ********************/
+const table = document.getElementById("input-table");
+function getTableData(){
+  const X=[],y=[];
+  for(let i=1;i<=10;i++){
+    const cells = table.rows[i].cells;
+    const row = [
+      parseFloat(cells[1].children[0].value),
+      parseFloat(cells[2].children[0].value),
+      parseFloat(cells[3].children[0].value),
+      parseFloat(cells[4].children[0].value)
     ];
+    const height = parseFloat(cells[5].children[0].value);
+    if(row.some(v=>isNaN(v))||isNaN(height)) return null;
+    X.push(row); y.push(height);
+  }
+  return {X,y};
+}
 
-    let html = '<table><tr><th>Değişken</th><th>Min</th><th>Max</th><th>Ortalama</th><th>Medyan</th><th>Mod</th></tr>';
-    variableNames.forEach((name, idx) => {
-      const s = calcStats(allVars[idx]);
-      html += `<tr><td>${name}</td><td>${s.min.toFixed(2)}</td><td>${s.max.toFixed(2)}</td><td>${s.mean.toFixed(2)}</td><td>${s.median.toFixed(2)}</td><td>${s.mode}</td></tr>`;
-    });
-    html += '</table>';
-    document.getElementById('analysis').innerHTML = html;
+/******************** 3. TAHMİN & ÇİZİM ********************/
+function predictHeights(){
+  if(!baseWeights.length){alert("Model henüz eğitilmedi!");return;}
+  const data=getTableData();
+  if(!data){alert("Lütfen tüm tabloyu doldurun!");return;}
+  const {X,y}=data;
+  const y_pred=X.map(r=>[1,...r]
+                    .reduce((s,v,i)=>s+v*baseWeights[i],0));
+
+  /* Tabloya yaz */
+  for(let i=1;i<=10;i++){
+    table.rows[i].cells[6].textContent=y_pred[i-1].toFixed(2);
   }
 
-  /*******************************
-   * 5. ÖZEL GRAFİK ÇİZME FONKSİYONU
-   *******************************/
-  function populateSelects() {
-    const sel1 = document.getElementById('var1');
-    const sel2 = document.getElementById('var2');
-    variableNames.forEach(v => {
-      const opt1 = new Option(v, v); sel1.appendChild(opt1);
-      const opt2 = new Option(v, v); sel2.appendChild(opt2.cloneNode(true));
-    });
+  /* R² */
+  const meanY=y.reduce((a,b)=>a+b,0)/y.length;
+  const ss_tot=y.reduce((s,yi)=>s+Math.pow(yi-meanY,2),0);
+  const ss_res=y.reduce((s,yi,i)=>s+Math.pow(yi-y_pred[i],2),0);
+  const r2  =1-ss_res/ss_tot;
+
+  /* değişken önemleri */
+  const importances=baseWeights.slice(1).map(Math.abs);
+  const sumImp=importances.reduce((a,b)=>a+b,0);
+  const normImp=importances.map(x=>x/sumImp);
+
+  document.getElementById("output").innerHTML =
+    `<b>Model Doğruluğu (R²):</b> ${r2.toFixed(2)}`;
+
+  drawBaseCharts(y,y_pred,normImp);
+}
+
+/* --- Grafikler --- */
+function drawBaseCharts(y,y_pred,imp){
+  /* Gerçek vs Tahmin */
+  const ctx1=document.getElementById('resultsChart').getContext('2d');
+  if(window.resChart)window.resChart.destroy();
+  window.resChart=new Chart(ctx1,{
+    type:'line',
+    data:{
+      labels:Array.from({length:y.length},(_,i)=>`Gün ${i+1}`),
+      datasets:[
+        {label:'Gerçek Boy',data:y,borderWidth:2,fill:false},
+        {label:'Tahmin Boy',data:y_pred,borderWidth:2,borderDash:[8,6],fill:false}
+      ]
+    },
+    options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}
+  });
+  /* Önemler */
+  const ctx2=document.getElementById('importanceChart').getContext('2d');
+  if(window.impChart)window.impChart.destroy();
+  window.impChart=new Chart(ctx2,{
+    type:'bar',
+    data:{
+      labels:["Sıcaklık","Nem","Hava Kalitesi","Işık"],
+      datasets:[{label:'Değişkenin Etkisi (%)',data:imp.map(x=>x*100)}]
+    },
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}
+  });
+}
+
+/******************** 4. ANALİZ TABLOSU ********************/
+function calcStats(arr){
+  const sorted=[...arr].sort((a,b)=>a-b);
+  const min=sorted[0],max=sorted[sorted.length-1];
+  const mean=arr.reduce((a,b)=>a+b,0)/arr.length;
+  const median=sorted.length%2?sorted[(sorted.length-1)/2]
+              :(sorted[sorted.length/2-1]+sorted[sorted.length/2])/2;
+  const freq={};arr.forEach(x=>freq[x]=(freq[x]||0)+1);
+  const modes=Object.keys(freq)
+              .filter(k=>freq[k]===Math.max(...Object.values(freq))).join(', ');
+  return{min,max,mean,median,mode:modes};
+}
+function showAnalysis(){
+  const data=getTableData();
+  if(!data){alert("Önce tabloyu doldurun!");return;}
+  const {X,y}=data;
+  const vars=[
+    X.map(r=>r[0]),X.map(r=>r[1]),X.map(r=>r[2]),X.map(r=>r[3]),y
+  ];
+  let html='<table><tr><th>Değişken</th><th>Min</th><th>Max</th><th>Ortalama</th><th>Medyan</th><th>Mod</th></tr>';
+  variableNames.forEach((v,i)=>{
+    const s=calcStats(vars[i]);
+    html+=`<tr><td>${v}</td><td>${s.min.toFixed(2)}</td><td>${s.max.toFixed(2)}</td><td>${s.mean.toFixed(2)}</td><td>${s.median.toFixed(2)}</td><td>${s.mode}</td></tr>`;
+  });
+  html+='</table>';
+  document.getElementById('analysis').innerHTML=html;
+}
+
+/******************** 5. ÖZEL GRAFİK ********************/
+function populateSelects(){
+  const s1=document.getElementById('var1');
+  const s2=document.getElementById('var2');
+  variableNames.forEach(v=>{
+    s1.appendChild(new Option(v,v));
+    s2.appendChild(new Option(v,v));
+  });
+}
+function drawCustomChart(){
+  const v1=document.getElementById('var1').value;
+  const v2=document.getElementById('var2').value;
+  const type=document.getElementById('chartType').value;
+  const data=getTableData(); if(!data){alert("Tabloyu doldurun!");return;}
+  const {X,y}=data;
+  const map={
+    "Sıcaklık":X.map(r=>r[0]),
+    "Nem":X.map(r=>r[1]),
+    "Hava Kalitesi":X.map(r=>r[2]),
+    "Işık":X.map(r=>r[3]),
+    "Boy":y
+  };
+  const labels=Array.from({length:y.length},(_,i)=>`Gün ${i+1}`);
+  const datasets=[
+    {label:v1,data:map[v1],borderWidth:2,fill:false}
+  ];
+  if(v2&&v2!==v1){
+    datasets.push({label:v2,data:map[v2],borderWidth:2,fill:false,borderDash:[6,4]});
   }
+  const ctx=document.getElementById('vizChart').getContext('2d');
+  if(window.vizChart)window.vizChart.destroy();
+  window.vizChart=new Chart(ctx,{type,data:{labels,datasets},
+    options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}});
+}
 
-  function drawCustomChart() {
-    const v1 = document.getElementById('var1').value;
-    const v2 = document.getElementById('var2').value;
-    const ctype = document.getElementById('chartType').value;
-    const data = getTableData();
-    if (!data) { alert("Tabloyu doldurun!"); return; }
-    const {X, y} = data;
-
-    const varMap = {
-      "Sıcaklık": X.map(r=>r[0]),
-      "Nem": X.map(r=>r[1]),
-      "Hava Kalitesi": X.map(r=>r[2]),
-      "Işık": X.map(r=>r[3]),
-      "Boy": y
-    };
-
-    const labels = Array.from({length: y.length}, (_,i)=>`Gün ${i+1}`);
-    const datasets = [];
-    datasets.push({label: v1, data: varMap[v1], borderWidth: 2, fill:false});
-    if (v2 && v2 !== v1) {
-      datasets.push({label: v2, data: varMap[v2], borderWidth: 2, fill:false, borderDash:[6,4]});
-    }
-
-    const ctx = document.getElementById('vizChart').getContext('2d');
-    if (window.vizChartObj) window.vizChartObj.destroy();
-    window.vizChartObj = new Chart(ctx, {
-      type: ctype,
-      data: {labels, datasets},
-      options: {
-        plugins: {legend:{position:'top'}},
-        scales: {y:{beginAtZero:true}}
-      }
-    });
-  }
-
-  /*******************
-   * 6. BAŞLANGIÇ
-   *******************/
-  trainBaseModel();
-  populateSelects();
+/******************** 6. BAŞLANGIÇ ********************/
+trainBaseModel();
+populateSelects();
 </script>
 </body>
 </html>
-
 
 
 
