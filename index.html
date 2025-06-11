@@ -146,7 +146,6 @@
 
     // 2. İstatistik Hesaplama
     function statistikleriHesapla() {
-      // Kullanıcı verisini oku
       let arr = [];
       for(let i=0;i<10;i++) {
         let tr = veriTablosu.children[i];
@@ -165,8 +164,7 @@
         }
         arr.push(satir);
       }
-      kullaniciVeri = arr; // Her satır: [sic, nem, hava, isik, boy]
-      // Min/maks/ortalama
+      kullaniciVeri = arr;
       const degiskenler = ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık", "Bitki Boyu"];
       let statsHtml = `<ul>`;
       for(let k=0;k<5;k++) {
@@ -178,7 +176,6 @@
       }
       statsHtml += "</ul>";
       document.getElementById("istatistik").innerHTML = statsHtml;
-      // Grafikler
       const chartWrap = document.getElementById("chartWrap");
       chartWrap.innerHTML = '';
       for(let k=0;k<5;k++) {
@@ -215,28 +212,29 @@
     let featureImportances = null;
 
     function modelEgit() {
-      // 100 satırlık sentetik train datası (Nem: 0-100 arası!)
+      // ml-cart kütüphanesi yüklendi mi, ML veya ml global ismiyle mi var kontrolü:
+      let ML = window.ML || window.ml;
+      if (!ML || !ML.Cart || !ML.Cart.RegressionTree) {
+        alert("Decision Tree kütüphanesi yüklenemedi! Sayfayı tekrar yükleyin veya internete bağlı olduğunuzdan emin olun.");
+        return;
+      }
       trainX = [];
       trainY = [];
       for(let i=0;i<100;i++) {
         let sic = rand(16,32);
-        let nem = rand(0,100);    // NEM 0-100 arasında
+        let nem = rand(0,100);
         let hava = rand(100,300);
         let isik = rand(200,1500);
-        // Gerçek model: boy = 2*sic + 0.5*nem - 0.02*hava + 0.03*isik + noise
         let boy = 2*sic + 0.5*nem - 0.02*hava + 0.03*isik + rand(-7,7);
         trainX.push([sic,nem,hava,isik]);
         trainY.push(boy);
       }
-      // Gerçek Decision Tree Regression (ml-cart)
       dtreeModel = new ML.Cart.RegressionTree({maxDepth:5,minNumSamples:5});
       dtreeModel.train(trainX, trainY);
 
-      // Kullanıcı verisinde tahmin
       let kullaniciX = kullaniciVeri.map(row=>row.slice(0,4));
       let kullaniciGercekY = kullaniciVeri.map(row=>row[4]);
       let tahminler = kullaniciX.map(x=>dtreeModel.predict(x));
-      // Tablo
       let tbody = "";
       for(let i=0;i<10;i++) {
         tbody += `<tr>
@@ -246,14 +244,12 @@
         </tr>`;
       }
       document.getElementById("tahminTablo").innerHTML = tbody;
-      // MSE ve R2
       let mse = (kullaniciGercekY.reduce((sum,y,i)=>sum+Math.pow(y-tahminler[i],2),0)/10).toFixed(2);
       let avgY = kullaniciGercekY.reduce((a,b)=>a+b,0)/10;
       let ssTot = kullaniciGercekY.reduce((sum,y)=>sum+Math.pow(y-avgY,2),0);
       let ssRes = kullaniciGercekY.reduce((sum,y,i)=>sum+Math.pow(y-tahminler[i],2),0);
       let r2 = (1-ssRes/ssTot).toFixed(2);
       document.getElementById("modelBasari").innerHTML = `<b>Model Performansı:</b> <br>MSE: ${mse} <br>R²: ${r2}`;
-      // Grafik
       let ctx = document.getElementById("tahminGrafik").getContext("2d");
       if(window.tahminChart) window.tahminChart.destroy();
       window.tahminChart = new Chart(ctx, {
@@ -270,13 +266,12 @@
           scales:{x:{title:{display:true,text:"Gün"}},y:{title:{display:true,text:"Bitki Boyu (mm)"}}}
         }
       });
-      // Feature importance hesapla (basit gini decrease ile, burada dallanmalara göre basitleştirildi)
       featureImportances = getFeatureImportances(dtreeModel,4);
       document.getElementById("modelAlani").style.display="block";
       document.getElementById("onemAlani").style.display="none";
     }
 
-    // 4. Değişken Önem Analizi (recursive tree traversal ile hesap)
+    // 4. Değişken Önem Analizi
     function getFeatureImportances(tree, nFeatures){
       let importance = Array(nFeatures).fill(0);
       function traverse(node, parentImp=1) {
@@ -292,7 +287,6 @@
       if(total>0) return importance.map(x=>(x/total));
       return importance;
     }
-
     function degiskenOnemAnaliz() {
       const isimler = ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık"];
       let maxIdx = featureImportances.indexOf(Math.max(...featureImportances));
@@ -305,11 +299,11 @@
         `Bitkinin uzamasına en çok etki eden değişkenler:<br>${sorted}`;
       document.getElementById("onemAlani").style.display="block";
     }
-
     function rand(a,b) { return Math.random()*(b-a)+a; }
   </script>
 </body>
 </html>
+
 
 
 
