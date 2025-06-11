@@ -3,30 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <title>Fasulye Deneyi: Bitki Boyu Tahmin Modeli</title>
-  <meta name="viewport" content="width=720, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.js"></script>
   <style>
+    /* === Temel Yerleşim === */
     html, body {
-      width: 720px;
-      height: 540px;
+      width: 100vw;
+      height: 100vh;
       margin: 0;
       padding: 0;
-      overflow: hidden;
       background: #f9f6ed;
     }
     body {
+      display: flex;
+      align-items: center;   /* Dikey ortalama */
+      justify-content: center; /* Yatay ortalama */
+      overflow: hidden;      /* Scroll bar yok */
       min-width: 720px;
       min-height: 540px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
+
+    /* === Uygulama Kutusu === */
     .container {
       width: 720px;
       height: 540px;
       box-sizing: border-box;
-      margin: 0;
       padding: 20px 16px 10px 16px;
       background: #fff;
       border-radius: 24px;
@@ -34,11 +36,13 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      overflow: hidden;
+      overflow: hidden; /* Scrollsuz içerik */
     }
+
+    /* === Metin & Tablolar === */
     h1 {
       font-size: 1.4em;
-      margin-bottom: 10px;
+      margin: 0 0 10px 0;
       text-align: center;
     }
     .info {
@@ -69,6 +73,7 @@
       font-weight: 700;
     }
     tr:last-child td { border-bottom: none; }
+
     button {
       background: #2368b8;
       color: #fff;
@@ -80,17 +85,22 @@
       margin: 10px auto 0 auto;
       display: block;
     }
+
     .output, .analysis {
-      margin-top: 8px;
-      font-size: 1em;
+      margin-top: 6px;
+      font-size: 0.98em;
       text-align: left;
+      max-height: 60px;
+      overflow: auto;
     }
+
+    /* === Grafikler === */
     .chart-container {
       width: 49%;
       height: 80px;
       display: inline-block;
       vertical-align: top;
-      margin: 5px 0 0 0;
+      margin: 4px 0 0 0;
     }
     #resultsChart, #importanceChart, #vizChart {
       width: 100% !important;
@@ -98,15 +108,18 @@
       max-width: 100%;
       background: #fff;
     }
+
     input[type="number"] {
       width: 58px;
       padding: 2px 3px;
       border-radius: 6px;
       border: 1px solid #ddd;
-      font-size: 0.98em;
+      font-size: 0.96em;
     }
+
+    /* === Görselleştirme Kontrolleri === */
     .viz-controls {
-      margin-top: 10px;
+      margin-top: 8px;
       background: #f4f8fb;
       padding: 6px 8px;
       border-radius: 10px;
@@ -128,9 +141,6 @@
       padding: 2px 4px;
       font-size: 0.95em;
     }
-    @media (max-width: 720px) {
-      html, body, .container { width: 100vw !important; }
-    }
   </style>
 </head>
 <body>
@@ -141,6 +151,8 @@
       Tabloyu doldur, <b>Tahmin Et</b> butonuna bas.<br>
       <b>Tahmin sütunu</b> otomatik dolacak, sonucu karşılaştır!
     </div>
+
+    <!-- ===== Veri Girişi ===== -->
     <form id="data-form">
       <table id="input-table">
         <tr>
@@ -152,21 +164,23 @@
           <th>Boy (cm)<br><span style="font-weight:normal;font-size:0.9em;">(Gerçek)</span></th>
           <th>Tahmin<br>Boy (cm)</th>
         </tr>
-        <!-- JS ile doldurulacak -->
+        <!-- JavaScript ile satırlar eklenir -->
       </table>
       <button type="button" onclick="predictHeights()">Tahmin Et</button>
     </form>
 
     <button type="button" onclick="showAnalysis()">Analizi Göster</button>
 
+    <!-- Analiz Sonuçları -->
     <div class="analysis" id="analysis"></div>
 
-    <div style="width:100%; display:flex; justify-content:space-between; margin-top:4px;">
+    <!-- Ana Grafikler -->
+    <div style="width:100%; display:flex; justify-content:space-between; margin-top:2px;">
       <div class="chart-container"><canvas id="resultsChart"></canvas></div>
       <div class="chart-container"><canvas id="importanceChart"></canvas></div>
     </div>
 
-    <!-- Görselleştirme kontrolleri -->
+    <!-- Görselleştirme Kontrolleri -->
     <div class="viz-controls">
       <label>Değişken 1:
         <select id="var1"></select>
@@ -197,7 +211,7 @@
    * 1. TABLOYU DOLDUR
    ************************/
   for (let i = 1; i <= 10; i++) {
-    let row = table.insertRow();
+    const row = table.insertRow();
     row.innerHTML =
       `<td>${i}</td>` +
       `<td><input type="number" step="0.1" required></td>` +
@@ -211,7 +225,6 @@
   /************************
    * 2. MODELİ ÖNCEDEN EĞİT
    ************************/
-  // Basit eğitim seti (örnek veriler). Öğretmen isteğe göre düzenleyebilir.
   const trainData = [
     {t:22.5,h:55,aq:140,l:450,ht:2.0},
     {t:23.0,h:58,aq:150,l:460,ht:2.3},
@@ -221,9 +234,8 @@
     {t:25.5,h:67,aq:180,l:550,ht:4.7},
     {t:26.0,h:68,aq:185,l:570,ht:5.4},
     {t:26.4,h:70,aq:190,l:600,ht:6.1},
-    {t:26.9,h:72,aq:200,l:620,ht:6.9},
-    {t:27.3,h:74,aq:210,l:640,ht:7.5},
-  ];
+    {t:26.9,h:72,aq:200,l:620,
+
 
   // Çoklu doğrusal regresyon (Normal denklemler)
   function linearRegression(X, y) {
