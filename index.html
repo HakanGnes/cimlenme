@@ -5,6 +5,7 @@
   <title>Fasulye Deneyi: Bitki Boyu Tahmin Modeli</title>
   <meta name="viewport" content="width=720, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.js"></script>
   <style>
     html, body {
       width: 720px;
@@ -33,6 +34,7 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
+      overflow-y: auto;
     }
     h1 {
       font-size: 1.4em;
@@ -78,8 +80,8 @@
       margin: 10px auto 0 auto;
       display: block;
     }
-    .output {
-      margin-top: 5px;
+    .output, .analysis {
+      margin-top: 8px;
       font-size: 1em;
       text-align: left;
     }
@@ -90,7 +92,7 @@
       vertical-align: top;
       margin: 5px 0 0 0;
     }
-    #resultsChart, #importanceChart {
+    #resultsChart, #importanceChart, #vizChart {
       width: 100% !important;
       height: 110px !important;
       max-width: 100%;
@@ -103,6 +105,29 @@
       border: 1px solid #ddd;
       font-size: 0.98em;
     }
+    .viz-controls {
+      margin-top: 10px;
+      background: #f4f8fb;
+      padding: 6px 8px;
+      border-radius: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      align-items: center;
+      justify-content: flex-start;
+      font-size: 0.95em;
+    }
+    .viz-controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    select {
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      padding: 2px 4px;
+      font-size: 0.95em;
+    }
     @media (max-width: 720px) {
       html, body, .container { width: 100vw !important; }
     }
@@ -113,8 +138,7 @@
     <h1>Fasulye Deneyi: Bitki Boyu Tahmini</h1>
     <div class="info">
       10 gün boyunca tohumun gelişimini gözlemledin!<br>
-      <b>Nem ve hava kalitesi, saf sensör değeri olarak girilmelidir.</b><br>
-      Tabloyu doldur, <b>Modeli Eğit</b> butonuna bas.<br>
+      Tabloyu doldur, <b>Tahmin Et</b> butonuna bas.<br>
       <b>Tahmin sütunu</b> otomatik dolacak, sonucu karşılaştır!
     </div>
     <form id="data-form">
@@ -122,121 +146,169 @@
         <tr>
           <th>Gün</th>
           <th>Sıcaklık (°C)</th>
-          <th>Nem (saf değer)</th>
-          <th>Hava Kalitesi (saf değer)</th>
+          <th>Nem</th>
+          <th>Hava Kalitesi</th>
           <th>Işık (lux)</th>
           <th>Boy (cm)<br><span style="font-weight:normal;font-size:0.9em;">(Gerçek)</span></th>
           <th>Tahmin<br>Boy (cm)</th>
         </tr>
         <!-- JS ile doldurulacak -->
       </table>
-      <button type="button" onclick="trainModel()">Modeli Eğit</button>
+      <button type="button" onclick="predictHeights()">Tahmin Et</button>
     </form>
-    <div class="output" id="output"></div>
-    <div style="width:100%; display:flex; justify-content:space-between;">
+
+    <button type="button" onclick="showAnalysis()">Analizi Göster</button>
+
+    <div class="analysis" id="analysis"></div>
+
+    <div style="width:100%; display:flex; justify-content:space-between; margin-top:4px;">
       <div class="chart-container"><canvas id="resultsChart"></canvas></div>
       <div class="chart-container"><canvas id="importanceChart"></canvas></div>
     </div>
+
+    <!-- Görselleştirme kontrolleri -->
+    <div class="viz-controls">
+      <label>Değişken 1:
+        <select id="var1"></select>
+      </label>
+      <label>Değişken 2 (isteğe bağlı):
+        <select id="var2"><option value="">Yok</option></select>
+      </label>
+      <label>Grafik Tipi:
+        <select id="chartType">
+          <option value="line">Çizgi</option>
+          <option value="bar">Sütun</option>
+        </select>
+      </label>
+      <button type="button" onclick="drawCustomChart()">Grafik Çiz</button>
+    </div>
+    <canvas id="vizChart"></canvas>
   </div>
 
 <script>
-  // Tabloyu otomatik 10 gün doldur
+  /*********************
+   * GLOBAL DEĞİŞKENLER
+   *********************/
+  const variableNames = ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık", "Boy"];
   const table = document.getElementById("input-table");
+  let baseWeights = [];
+
+  /************************
+   * 1. TABLOYU DOLDUR
+   ************************/
   for (let i = 1; i <= 10; i++) {
     let row = table.insertRow();
     row.innerHTML =
       `<td>${i}</td>` +
-      `<td><input type="number" step="0.1" required></td>` + // Sıcaklık
-      `<td><input type="number" step="1" required></td>` +   // Nem (saf değer)
-      `<td><input type="number" step="1" required></td>` +   // Hava Kalitesi (saf değer)
+      `<td><input type="number" step="0.1" required></td>` +
+      `<td><input type="number" step="1" required></td>` +   // Nem
+      `<td><input type="number" step="1" required></td>` +   // Hava Kalitesi
       `<td><input type="number" step="1" required></td>` +   // Işık
       `<td><input type="number" step="0.01" required></td>` + // Gerçek Boy
       `<td class="prediction"></td>`; // Tahmin Boy
   }
 
-  function getTableData() {
-    let X = [], y = [];
+  /************************
+   * 2. MODELİ ÖNCEDEN EĞİT
+   ************************/
+  // Basit eğitim seti (örnek veriler). Öğretmen isteğe göre düzenleyebilir.
+  const trainData = [
+    {t:22.5,h:55,aq:140,l:450,ht:2.0},
+    {t:23.0,h:58,aq:150,l:460,ht:2.3},
+    {t:24.2,h:60,aq:160,l:480,ht:2.9},
+    {t:24.8,h:62,aq:165,l:500,ht:3.4},
+    {t:25.1,h:65,aq:170,l:520,ht:4.0},
+    {t:25.5,h:67,aq:180,l:550,ht:4.7},
+    {t:26.0,h:68,aq:185,l:570,ht:5.4},
+    {t:26.4,h:70,aq:190,l:600,ht:6.1},
+    {t:26.9,h:72,aq:200,l:620,ht:6.9},
+    {t:27.3,h:74,aq:210,l:640,ht:7.5},
+  ];
+
+  // Çoklu doğrusal regresyon (Normal denklemler)
+  function linearRegression(X, y) {
+    const X_b = X.map(r => [1, ...r]);
+    const XT = math.transpose(X_b);
+    const XTX = math.multiply(XT, X_b);
+    const XTy = math.multiply(XT, y);
+    const w = math.lusolve(XTX, XTy).map(r => r[0]);
+    return w; // [b0, b1, b2, b3, b4]
+  }
+
+  function prepareTrainingArrays(data) {
+    const X = data.map(d => [d.t, d.h, d.aq, d.l]);
+    const y = data.map(d => d.ht);
+    return {X, y};
+  }
+
+  function trainBaseModel() {
+    const {X, y} = prepareTrainingArrays(trainData);
+    baseWeights = linearRegression(X, y);
+  }
+
+  /************************
+   * 3. TAHMİN İŞLEVİ
+   ************************/
+  function getTableData(includePred=false) {
+    const X = [], y = [];
     for (let i = 1; i <= 10; i++) {
-      let cells = table.rows[i].cells;
-      let sicaklik = parseFloat(cells[1].children[0].value);
-      let nem = parseFloat(cells[2].children[0].value);
-      let hava = parseFloat(cells[3].children[0].value);
-      let isik = parseFloat(cells[4].children[0].value);
-      let boy = parseFloat(cells[5].children[0].value);
-      if(
-        isNaN(sicaklik)||isNaN(nem)||isNaN(hava)||isNaN(isik)||isNaN(boy)
-      ) return null;
-      X.push([sicaklik, nem, hava, isik]);
-      y.push(boy);
+      const cells = table.rows[i].cells;
+      const rowValues = [
+        parseFloat(cells[1].children[0].value), // temp
+        parseFloat(cells[2].children[0].value), // humidity
+        parseFloat(cells[3].children[0].value), // air quality
+        parseFloat(cells[4].children[0].value)  // light
+      ];
+      const height = parseFloat(cells[5].children[0].value);
+      if (rowValues.some(v => isNaN(v)) || isNaN(height)) return null;
+      X.push(rowValues);
+      y.push(height);
     }
     return {X, y};
   }
 
-  // Basit çoklu doğrusal regresyon
-  function linearRegression(X, y) {
-    let X_b = X.map(row => [1, ...row]);
-    let XT = math.transpose(X_b);
-    let XTX = math.multiply(XT, X_b);
-    let XTy = math.multiply(XT, y);
-    let w = math.lusolve(XTX, XTy).map(row => row[0]);
-    let y_pred = X_b.map(row => row.reduce((s,v,idx) => s+v*w[idx], 0));
-    return {w, y_pred};
-  }
-
-  function trainModel() {
-    const {X, y} = getTableData() || {};
-    if (!X || !y) {
+  function predictHeights() {
+    if (!baseWeights.length) {
+      alert("Model henüz eğitilmedi!");
+      return;
+    }
+    const data = getTableData();
+    if (!data) {
       alert("Lütfen tüm tabloyu doldurun!");
       return;
     }
-    // math.js yüklü mü?
-    if (typeof math === "undefined") {
-      let script = document.createElement('script');
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.js";
-      script.onload = () => trainModel();
-      document.body.appendChild(script);
-      return;
-    }
-    const {w, y_pred} = linearRegression(X, y);
+    const {X, y} = data;
+    const y_pred = X.map(r => [1, ...r].reduce((s,v,i) => s + v * baseWeights[i], 0));
 
     // Tahminleri tabloya yaz
     for (let i = 1; i <= 10; i++) {
-      let pred = y_pred[i-1];
-      let predCell = table.rows[i].cells[6];
-      predCell.textContent = pred.toFixed(2);
+      const pred = y_pred[i-1];
+      table.rows[i].cells[6].textContent = pred.toFixed(2);
     }
 
-    // R2 doğruluk
-    let meanY = y.reduce((a,b) => a+b,0)/y.length;
-    let ss_tot = y.reduce((s,yi) => s + Math.pow(yi-meanY,2), 0);
-    let ss_res = y.reduce((s,yi,i) => s + Math.pow(yi-y_pred[i],2), 0);
-    let r2 = 1 - ss_res/ss_tot;
+    // R^2 hesapla
+    const meanY = y.reduce((a,b) => a+b,0)/y.length;
+    const ss_tot = y.reduce((s,yi) => s + Math.pow(yi-meanY,2), 0);
+    const ss_res = y.reduce((s,yi,i) => s + Math.pow(yi - y_pred[i],2), 0);
+    const r2 = 1 - ss_res/ss_tot;
 
-    // Özellik önemleri
-    let importances = w.slice(1).map(Math.abs);
-    let sumImp = importances.reduce((a,b)=>a+b,0);
-    let normImportances = importances.map(x=>x/sumImp);
+    // Değişken önemleri
+    const importances = baseWeights.slice(1).map(Math.abs);
+    const sumImp = importances.reduce((a,b) => a+b, 0);
+    const normImp = importances.map(x => x / sumImp);
 
-    // Sonuçlar
-    let out = `<b>Model Doğruluğu (R²):</b> ${r2.toFixed(2)}<br>
-    <b>Değişken Önemleri:</b>
-    <ul>
-      <li>Sıcaklık: ${(normImportances[0]*100).toFixed(1)}%</li>
-      <li>Nem: ${(normImportances[1]*100).toFixed(1)}%</li>
-      <li>Hava Kalitesi: ${(normImportances[2]*100).toFixed(1)}%</li>
-      <li>Işık: ${(normImportances[3]*100).toFixed(1)}%</li>
-    </ul>`;
-    document.getElementById("output").innerHTML = out;
+    // Sonuçları göster
+    document.getElementById("output").innerHTML =
+      `<b>Model Doğruluğu (R²):</b> ${r2.toFixed(2)}`;
 
-    showResultsChart(y, y_pred);
-    showImportanceChart(normImportances);
+    drawBaseCharts(y, y_pred, normImp);
   }
 
-  // Sonuç grafiği
-  function showResultsChart(y, y_pred) {
-    const ctx = document.getElementById('resultsChart').getContext('2d');
-    if(window.resultsChartObj){window.resultsChartObj.destroy();}
-    window.resultsChartObj = new Chart(ctx, {
+  function drawBaseCharts(y, y_pred, importances) {
+    // Sonuç çizgi grafiği
+    const ctx1 = document.getElementById('resultsChart').getContext('2d');
+    if (window.resultsChartObj) window.resultsChartObj.destroy();
+    window.resultsChartObj = new Chart(ctx1, {
       type: 'line',
       data: {
         labels: Array.from({length: y.length}, (_,i)=>`Gün ${i+1}`),
@@ -250,20 +322,15 @@
         scales: {y:{beginAtZero:true}}
       }
     });
-  }
 
-  // Değişken önemleri grafiği
-  function showImportanceChart(importances) {
-    const ctx = document.getElementById('importanceChart').getContext('2d');
-    if(window.importanceChartObj){window.importanceChartObj.destroy();}
-    window.importanceChartObj = new Chart(ctx, {
+    // Özellik önemleri çubuk grafiği
+    const ctx2 = document.getElementById('importanceChart').getContext('2d');
+    if (window.importanceChartObj) window.importanceChartObj.destroy();
+    window.importanceChartObj = new Chart(ctx2, {
       type: 'bar',
       data: {
         labels: ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık"],
-        datasets: [{
-          label: 'Değişkenin Etkisi (%)',
-          data: importances.map(x=>x*100),
-        }]
+        datasets: [{label: 'Değişkenin Etkisi (%)', data: importances.map(x=>x*100)}]
       },
       options: {
         plugins: {legend: {display: false}},
@@ -271,9 +338,103 @@
       }
     });
   }
+
+  /**********************
+   * 4. ANALİZ FONKSİYONU
+   **********************/
+  function calcStats(arr) {
+    const sorted = [...arr].sort((a,b)=>a-b);
+    const min = sorted[0];
+    const max = sorted[sorted.length-1];
+    const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
+    const median = sorted.length % 2 === 0 ? (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2 : sorted[Math.floor(sorted.length/2)];
+    const freq = {};
+    arr.forEach(x => freq[x] = (freq[x]||0)+1);
+    const maxFreq = Math.max(...Object.values(freq));
+    const modes = Object.keys(freq).filter(k => freq[k] === maxFreq).map(Number);
+    return {min, max, mean, median, mode: modes.join(', ')};
+  }
+
+  function showAnalysis() {
+    const data = getTableData();
+    if (!data) {
+      alert("Önce tabloyu doldurun!");
+      return;
+    }
+    const {X, y} = data;
+    const allVars = [
+      X.map(r=>r[0]), // temp
+      X.map(r=>r[1]), // humidity
+      X.map(r=>r[2]), // air quality
+      X.map(r=>r[3]), // light
+      y               // height
+    ];
+
+    let html = '<table><tr><th>Değişken</th><th>Min</th><th>Max</th><th>Ortalama</th><th>Medyan</th><th>Mod</th></tr>';
+    variableNames.forEach((name, idx) => {
+      const s = calcStats(allVars[idx]);
+      html += `<tr><td>${name}</td><td>${s.min.toFixed(2)}</td><td>${s.max.toFixed(2)}</td><td>${s.mean.toFixed(2)}</td><td>${s.median.toFixed(2)}</td><td>${s.mode}</td></tr>`;
+    });
+    html += '</table>';
+    document.getElementById('analysis').innerHTML = html;
+  }
+
+  /*******************************
+   * 5. ÖZEL GRAFİK ÇİZME FONKSİYONU
+   *******************************/
+  function populateSelects() {
+    const sel1 = document.getElementById('var1');
+    const sel2 = document.getElementById('var2');
+    variableNames.forEach(v => {
+      const opt1 = new Option(v, v); sel1.appendChild(opt1);
+      const opt2 = new Option(v, v); sel2.appendChild(opt2.cloneNode(true));
+    });
+  }
+
+  function drawCustomChart() {
+    const v1 = document.getElementById('var1').value;
+    const v2 = document.getElementById('var2').value;
+    const ctype = document.getElementById('chartType').value;
+    const data = getTableData();
+    if (!data) { alert("Tabloyu doldurun!"); return; }
+    const {X, y} = data;
+
+    const varMap = {
+      "Sıcaklık": X.map(r=>r[0]),
+      "Nem": X.map(r=>r[1]),
+      "Hava Kalitesi": X.map(r=>r[2]),
+      "Işık": X.map(r=>r[3]),
+      "Boy": y
+    };
+
+    const labels = Array.from({length: y.length}, (_,i)=>`Gün ${i+1}`);
+    const datasets = [];
+    datasets.push({label: v1, data: varMap[v1], borderWidth: 2, fill:false});
+    if (v2 && v2 !== v1) {
+      datasets.push({label: v2, data: varMap[v2], borderWidth: 2, fill:false, borderDash:[6,4]});
+    }
+
+    const ctx = document.getElementById('vizChart').getContext('2d');
+    if (window.vizChartObj) window.vizChartObj.destroy();
+    window.vizChartObj = new Chart(ctx, {
+      type: ctype,
+      data: {labels, datasets},
+      options: {
+        plugins: {legend:{position:'top'}},
+        scales: {y:{beginAtZero:true}}
+      }
+    });
+  }
+
+  /*******************
+   * 6. BAŞLANGIÇ
+   *******************/
+  trainBaseModel();
+  populateSelects();
 </script>
 </body>
 </html>
+
 
 
 
