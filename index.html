@@ -2,305 +2,185 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Fasulye Deneyi - Gerçek Decision Tree Modeli</title>
-  <meta name="viewport" content="width=720, initial-scale=1">
-  <script src="ml-cart.min.js"></script>
-  <!-- ml-cart: Gerçek Decision Tree Regression için -->
-  <script src="https://unpkg.com/ml-cart@5.4.2/dist/ml-cart.min.js"></script>
+  <title>Fasulye Deneyi – Karar Ağacı Modeli</title>
+  <meta name="viewport" content="width=720, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    html, body {
-      width: 720px;
-      height: 540px;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #f9f6ed;
-      font-family: 'Quicksand', 'Segoe UI', Arial, sans-serif;
-    }
-    .container {
-      width: 700px;
-      margin: 0 auto;
-      padding: 16px;
-      box-sizing: border-box;
-      background: #fffbe8;
-      border-radius: 20px;
-      box-shadow: 0 2px 24px #c8c4b3;
-      height: 500px;
-      overflow-y: auto;
-    }
-    h2 { color: #2d4336; }
-    table { border-collapse: collapse; width: 100%; background: #f9f6ed;}
-    th, td { border: 1px solid #bdb493; text-align: center; padding: 4px;}
-    input[type="number"] { width: 60px; }
-    .btn {
-      background: #4ca380;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 18px;
-      margin-top: 14px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 1em;
-      transition: background 0.2s;
-    }
-    .btn:hover { background: #39725d;}
-    .step { margin-bottom: 22px; }
-    .stats { margin: 12px 0; padding: 10px 14px; background: #f2eecb; border-radius: 8px;}
-    .imp { font-weight: bold; color: #8e5500; }
-    .charts { display: flex; flex-wrap: wrap; gap: 18px;}
-    .charts canvas { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #ece9dd;}
-    .center { text-align: center; }
-    @media (max-width: 720px) {
-      .container { width: 100vw; }
-      html, body { width: 100vw; }
-    }
+    html,body{width:720px;height:540px;margin:0;padding:0;overflow:hidden;background:#f9f6ed;font-family:'Quicksand','Segoe UI',Arial,sans-serif}
+    .container{width:700px;margin:0 auto;padding:16px;box-sizing:border-box;background:#fffbe8;border-radius:20px;box-shadow:0 2px 24px #c8c4b3;height:500px;overflow-y:auto}
+    table{border-collapse:collapse;width:100%;background:#f9f6ed}
+    th,td{border:1px solid #bdb493;text-align:center;padding:4px}
+    input[type=number]{width:60px}
+    .btn{background:#4ca380;color:#fff;border:none;border-radius:8px;padding:8px 18px;margin-top:14px;cursor:pointer;font-weight:bold;font-size:1em;transition:background .2s}
+    .btn:hover{background:#39725d}
+    .step{margin-bottom:22px}
+    .stats{margin:12px 0;padding:10px 14px;background:#f2eecb;border-radius:8px}
+    .charts{display:flex;flex-wrap:wrap;gap:18px}
+    .charts canvas{background:#fff;border-radius:12px;box-shadow:0 2px 8px #ece9dd}
+    .center{text-align:center}
+    @media(max-width:720px){.container{width:100vw}html,body{width:100vw}}
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Fasulye Deneyi: Bitki Uzama Tahmini (Gerçek Decision Tree)</h2>
+    <h2>Fasulye Deneyi: Bitki Uzama Tahmini (Karar Ağacı)</h2>
 
-    <!-- 1. Veri Girişi -->
+    <!-- 1 | Veri Girişi -->
     <div class="step">
-      <b>1. 10 günlük ölçümlerini tabloya gir:</b>
+      <b>1. 10 günlük ölçümlerini tabloya gir:</b>
       <form id="dataForm" autocomplete="off">
         <table>
           <thead>
             <tr>
-              <th>Gün</th>
-              <th>Sıcaklık (°C)</th>
-              <th>Nem (%) <span style="color:#777;font-size:0.9em;">(0-100)</span></th>
-              <th>Hava Kalitesi</th>
-              <th>Işık (lux)</th>
-              <th>Bitki Boyu (mm)</th>
+              <th>Gün</th><th>Sıcaklık (°C)</th><th>Nem (%)</th><th>Hava Kalitesi (ppm CO₂)</th><th>Işık (lux)</th><th>Bitki Boyu (mm)</th>
             </tr>
           </thead>
           <tbody id="veriTablosu"></tbody>
         </table>
-        <div class="center">
-          <button type="button" class="btn" onclick="statistikleriHesapla()">Devam &rarr;</button>
-        </div>
+        <div class="center"><button type="button" class="btn" onclick="istatistikleriHesapla()">Devam &rarr;</button></div>
       </form>
     </div>
 
-    <!-- 2. İstatistik ve Grafikler -->
+    <!-- 2 | İstatistik ve Grafikler -->
     <div class="step" id="istatistikAlani" style="display:none;">
-      <b>2. Değişkenlerin İstatistikleri ve Grafikler</b>
+      <b>2. Değişkenlerin İstatistikleri ve Grafikler</b>
       <div class="stats" id="istatistik"></div>
       <div class="charts" id="chartWrap"></div>
-      <div class="center">
-        <button type="button" class="btn" onclick="modelEgit()">Modeli Eğit & Tahmin Et</button>
-      </div>
+      <div class="center"><button type="button" class="btn" onclick="modelEgit()">Tahmin Et</button></div>
     </div>
 
-    <!-- 3. Model Sonucu -->
+    <!-- 3 | Model Sonucu -->
     <div class="step" id="modelAlani" style="display:none;">
-      <b>3. Bitkinin Uzamasını Tahmin Et (Gerçek Decision Tree Modeli)</b>
+      <b>3. Bitkinin Uzamasını Tahmin Et</b>
       <div style="overflow-x:auto;">
         <table>
-          <thead>
-            <tr>
-              <th>Gün</th>
-              <th>Gerçek Boy (mm)</th>
-              <th>Tahmin (mm)</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Gün</th><th>Gerçek Boy (mm)</th><th>Tahmin (mm)</th></tr></thead>
           <tbody id="tahminTablo"></tbody>
         </table>
       </div>
       <div id="modelBasari" class="stats"></div>
-      <div class="charts" style="margin-top:12px;">
-        <canvas id="tahminGrafik" width="320" height="180"></canvas>
-      </div>
-      <div class="center">
-        <button type="button" class="btn" onclick="degiskenOnemAnaliz()">Değişken Önemi Analiz Et</button>
-      </div>
+      <div class="charts" style="margin-top:12px;"><canvas id="tahminGrafik" width="320" height="180"></canvas></div>
+      <div class="center"><button type="button" class="btn" onclick="degiskenOnemAnaliz()">Değişken Önemi Analiz Et</button></div>
     </div>
 
-    <!-- 4. Değişken Önemi -->
+    <!-- 4 | Değişken Önemi -->
     <div class="step" id="onemAlani" style="display:none;">
-      <b>4. Hangi değişken daha etkili?</b>
-      <div class="stats">
-        <span id="onemSonuc"></span>
-      </div>
+      <b>4. Hangi değişken daha etkili?</b>
+      <div class="stats"><span id="onemSonuc"></span></div>
     </div>
   </div>
-  <script>
-    // --- 1. Giriş Tablosunu Oluştur ---
-    const veriTablosu = document.getElementById('veriTablosu');
-    for(let i=0;i<10;i++) {
-      let tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td><input type="number" required></td>
-        <td><input type="number" min="0" max="100" required></td>
-        <td><input type="number" required></td>
-        <td><input type="number" required></td>
-        <td><input type="number" required></td>
-      `;
-      veriTablosu.appendChild(tr);
+
+<script>
+/********************  Karar Ağacı Fonksiyonu  ********************/
+function tahminEt(temp, hum, air, light){
+  if(light<=5052.90){
+    if(air<=366.05){return 305.70;}
+    else{
+      if(temp<=21.48){return hum<=61.56?228.04:144.74;}
+      else{return temp<=24.58?51.00:159.62;}
     }
-
-    let kullaniciVeri = null;
-
-    // 2. İstatistik Hesaplama
-    function statistikleriHesapla() {
-      let arr = [];
-      for(let i=0;i<10;i++) {
-        let tr = veriTablosu.children[i];
-        let satir = [];
-        for(let j=1;j<=5;j++) {
-          let val = tr.children[j].children[0].value;
-          if(val===""||isNaN(val)) {
-            alert("Lütfen tüm alanları doldurun.");
-            return;
-          }
-          if(j==2 && (val<0 || val>100)) {
-            alert("Nem değeri 0-100 arasında olmalı!");
-            return;
-          }
-          satir.push(Number(val));
-        }
-        arr.push(satir);
-      }
-      kullaniciVeri = arr;
-      const degiskenler = ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık", "Bitki Boyu"];
-      let statsHtml = `<ul>`;
-      for(let k=0;k<5;k++) {
-        let kolon = arr.map(x=>x[k]);
-        let min = Math.min(...kolon);
-        let max = Math.max(...kolon);
-        let ort = (kolon.reduce((a,b)=>a+b,0)/kolon.length).toFixed(2);
-        statsHtml += `<li><b>${degiskenler[k]}</b>: Min=${min}, Maks=${max}, Ortalama=${ort}</li>`;
-      }
-      statsHtml += "</ul>";
-      document.getElementById("istatistik").innerHTML = statsHtml;
-      const chartWrap = document.getElementById("chartWrap");
-      chartWrap.innerHTML = '';
-      for(let k=0;k<5;k++) {
-        let canvas = document.createElement('canvas');
-        canvas.width=200;canvas.height=100;
-        chartWrap.appendChild(canvas);
-        new Chart(canvas.getContext("2d"), {
-          type: 'line',
-          data: {
-            labels: [...Array(10)].map((_,i)=>i+1),
-            datasets: [{
-              label: degiskenler[k],
-              data: arr.map(x=>x[k]),
-              fill:false,
-              tension:0.2,
-              pointRadius:3,
-              borderWidth:2
-            }]
-          },
-          options: {
-            plugins:{legend:{display:false}},
-            scales:{x:{title:{display:true,text:'Gün'}},y:{title:{display:true,text:degiskenler[k]}}}
-          }
-        });
-      }
-      document.getElementById("istatistikAlani").style.display="block";
-      document.getElementById("modelAlani").style.display="none";
-      document.getElementById("onemAlani").style.display="none";
+  }else{
+    if(temp<=27.53){
+      if(light<=17884.05){return air<=357.25?348.80:199.77;}
+      else{return 437.00;}
+    }else{
+      if(temp<=27.92){return air<=452.95?258.80:348.48;}
+      else{return 56.90;}
     }
+  }
+}
+const featureImportances=[0.442,0.068,0.168,0.322];
 
-    // --- 3. Model Eğitimi ve Tahmin (Gerçek Decision Tree) ---
-    let dtreeModel = null;
-    let trainX = null, trainY = null;
-    let featureImportances = null;
+/********************  Tablo Oluştur  ********************/
+const veriTablosu=document.getElementById('veriTablosu');
+for(let i=0;i<10;i++){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${i+1}</td><td><input type='number' required></td><td><input type='number' min='0' max='100' required></td><td><input type='number' required></td><td><input type='number' required></td><td><input type='number' required></td>`;
+  veriTablosu.appendChild(tr);
+}
+let kullaniciVeri=null;
 
-    function modelEgit() {
-      // ml-cart kütüphanesi yüklendi mi, ML veya ml global ismiyle mi var kontrolü:
-      let ML = window.ML || window.ml;
-      if (!ML || !ML.Cart || !ML.Cart.RegressionTree) {
-        alert("Decision Tree kütüphanesi yüklenemedi! Sayfayı tekrar yükleyin veya internete bağlı olduğunuzdan emin olun.");
-        return;
-      }
-      trainX = [];
-      trainY = [];
-      for(let i=0;i<100;i++) {
-        let sic = rand(16,32);
-        let nem = rand(0,100);
-        let hava = rand(100,300);
-        let isik = rand(200,1500);
-        let boy = 2*sic + 0.5*nem - 0.02*hava + 0.03*isik + rand(-7,7);
-        trainX.push([sic,nem,hava,isik]);
-        trainY.push(boy);
-      }
-      dtreeModel = new ML.Cart.RegressionTree({maxDepth:5,minNumSamples:5});
-      dtreeModel.train(trainX, trainY);
-
-      let kullaniciX = kullaniciVeri.map(row=>row.slice(0,4));
-      let kullaniciGercekY = kullaniciVeri.map(row=>row[4]);
-      let tahminler = kullaniciX.map(x=>dtreeModel.predict(x));
-      let tbody = "";
-      for(let i=0;i<10;i++) {
-        tbody += `<tr>
-          <td>${i+1}</td>
-          <td>${kullaniciGercekY[i]}</td>
-          <td>${tahminler[i].toFixed(1)}</td>
-        </tr>`;
-      }
-      document.getElementById("tahminTablo").innerHTML = tbody;
-      let mse = (kullaniciGercekY.reduce((sum,y,i)=>sum+Math.pow(y-tahminler[i],2),0)/10).toFixed(2);
-      let avgY = kullaniciGercekY.reduce((a,b)=>a+b,0)/10;
-      let ssTot = kullaniciGercekY.reduce((sum,y)=>sum+Math.pow(y-avgY,2),0);
-      let ssRes = kullaniciGercekY.reduce((sum,y,i)=>sum+Math.pow(y-tahminler[i],2),0);
-      let r2 = (1-ssRes/ssTot).toFixed(2);
-      document.getElementById("modelBasari").innerHTML = `<b>Model Performansı:</b> <br>MSE: ${mse} <br>R²: ${r2}`;
-      let ctx = document.getElementById("tahminGrafik").getContext("2d");
-      if(window.tahminChart) window.tahminChart.destroy();
-      window.tahminChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [...Array(10)].map((_,i)=>i+1),
-          datasets: [
-            {label:"Gerçek",data:kullaniciGercekY,fill:false,borderWidth:2,pointRadius:3},
-            {label:"Tahmin",data:tahminler,fill:false,borderWidth:2,pointRadius:3}
-          ]
-        },
-        options:{
-          plugins:{legend:{display:true}},
-          scales:{x:{title:{display:true,text:"Gün"}},y:{title:{display:true,text:"Bitki Boyu (mm)"}}}
-        }
-      });
-      featureImportances = getFeatureImportances(dtreeModel,4);
-      document.getElementById("modelAlani").style.display="block";
-      document.getElementById("onemAlani").style.display="none";
+/********************  2 | İstatistik ve Grafikler  ********************/
+function istatistikleriHesapla(){
+  const arr=[];
+  for(let i=0;i<10;i++){
+    const tr=veriTablosu.children[i];
+    const satir=[];
+    for(let j=1;j<=5;j++){
+      const val=tr.children[j].children[0].value;
+      if(val===""||isNaN(val)){alert('Lütfen tüm alanları doldurun.');return;}
+      if(j==2&&(val<0||val>100)){alert('Nem değeri 0-100 arasında olmalı!');return;}
+      satir.push(Number(val));
     }
+    arr.push(satir);
+  }
+  kullaniciVeri=arr;
 
-    // 4. Değişken Önem Analizi
-    function getFeatureImportances(tree, nFeatures){
-      let importance = Array(nFeatures).fill(0);
-      function traverse(node, parentImp=1) {
-        if(!node) return;
-        if(node.feature !== undefined && node.feature !== null) {
-          importance[node.feature] += parentImp;
-          if(node.left) traverse(node.left, parentImp/2);
-          if(node.right) traverse(node.right, parentImp/2);
-        }
-      }
-      traverse(tree.root);
-      let total = importance.reduce((a,b)=>a+b,0);
-      if(total>0) return importance.map(x=>(x/total));
-      return importance;
-    }
-    function degiskenOnemAnaliz() {
-      const isimler = ["Sıcaklık", "Nem", "Hava Kalitesi", "Işık"];
-      let maxIdx = featureImportances.indexOf(Math.max(...featureImportances));
-      let sorted = featureImportances
-        .map((val,idx)=>({val:val,idx:idx}))
-        .sort((a,b)=>b.val-a.val)
-        .map((x,i)=>`#${i+1}: <b>${isimler[x.idx]}</b> (${(x.val*100).toFixed(1)}%)`)
-        .join('<br>');
-      document.getElementById("onemSonuc").innerHTML =
-        `Bitkinin uzamasına en çok etki eden değişkenler:<br>${sorted}`;
-      document.getElementById("onemAlani").style.display="block";
-    }
-    function rand(a,b) { return Math.random()*(b-a)+a; }
-  </script>
+  const degiskenler=['Sıcaklık','Nem','Hava Kalitesi','Işık','Bitki Boyu'];
+  let statsHtml='<ul>';
+  for(let k=0;k<5;k++){
+    const kolon=arr.map(x=>x[k]);
+    const min=Math.min(...kolon);
+    const max=Math.max(...kolon);
+    const ort=(kolon.reduce((a,b)=>a+b,0)/kolon.length).toFixed(2);
+    statsHtml+=`<li><b>${degiskenler[k]}</b>: Min=${min}, Maks=${max}, Ortalama=${ort}</li>`;
+  }
+  statsHtml+='</ul>';
+  document.getElementById('istatistik').innerHTML=statsHtml;
+
+  const chartWrap=document.getElementById('chartWrap');
+  chartWrap.innerHTML='';
+  for(let k=0;k<5;k++){
+    const canvas=document.createElement('canvas');canvas.width=200;canvas.height=100;chartWrap.appendChild(canvas);
+    new Chart(canvas.getContext('2d'),{
+      type:'line',
+      data:{labels:[...Array(10)].map((_,i)=>i+1),datasets:[{label:degiskenler[k],data:arr.map(x=>x[k]),fill:false,tension:0.2,pointRadius:3,borderWidth:2}]},
+      options:{plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Gün'}},y:{title:{display:true,text:degiskenler[k]}}}}
+    });
+  }
+  document.getElementById('istatistikAlani').style.display='block';
+  document.getElementById('modelAlani').style.display='none';
+  document.getElementById('onemAlani').style.display='none';
+}
+
+/********************  3 | Tahmin  ********************/
+function modelEgit(){
+  if(!kullaniciVeri){alert('Önce verileri girip Devam butonuna basın.');return;}
+  const kullaniciX=kullaniciVeri.map(r=>r.slice(0,4));
+  const kullaniciY=kullaniciVeri.map(r=>r[4]);
+  const tahminler=kullaniciX.map(x=>tahminEt(...x));
+
+  // Tablo
+  let tbody='';
+  for(let i=0;i<10;i++)tbody+=`<tr><td>${i+1}</td><td>${kullaniciY[i]}</td><td>${tahminler[i].toFixed(1)}</td></tr>`;
+  document.getElementById('tahminTablo').innerHTML=tbody;
+
+  // Performans
+  const mse=(kullaniciY.reduce((s,y,i)=>s+Math.pow(y-tahminler[i],2),0)/10).toFixed(2);
+  const avg=kullaniciY.reduce((a,b)=>a+b,0)/10;
+  const ssTot=kullaniciY.reduce((s,y)=>s+Math.pow(y-avg,2),0);
+  const ssRes=kullaniciY.reduce((s,y,i)=>s+Math.pow(y-tahminler[i],2),0);
+  const r2=(1-ssRes/ssTot).toFixed(2);
+  document.getElementById('modelBasari').innerHTML=`<b>Model Performansı</b><br>MSE: ${mse}  R²: ${r2}`;
+
+  // Grafik
+  const ctx=document.getElementById('tahminGrafik').getContext('2d');
+  if(window.tahminChart)window.tahminChart.destroy();
+  window.tahminChart=new Chart(ctx,{type:'line',data:{labels:[...Array(10)].map((_,i)=>i+1),datasets:[{label:'Gerçek',data:kullaniciY,fill:false,borderWidth:2,pointRadius:3},{label:'Tahmin',data:tahminler,fill:false,borderWidth:2,pointRadius:3}]},options:{plugins:{legend:{display:true}},scales:{x:{title:{display:true,text:'Gün'}},y:{title:{display:true,text:'Bitki Boyu (mm)'}}}}});
+
+  document.getElementById('modelAlani').style.display='block';
+  document.getElementById('onemAlani').style.display='none';
+}
+
+/********************  4 | Önem Analizi  ********************/
+function degiskenOnemAnaliz(){
+  const isimler=['Sıcaklık','Nem','Hava Kalitesi','Işık'];
+  const sorted=featureImportances.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+  const html=sorted.map((x,idx)=>`#${idx+1}: <b>${isimler[x.i]}</b> (${(x.v*100).toFixed(1)}%)`).join('<br>');
+  document.getElementById('onemSonuc').innerHTML=html;
+  document.getElementById('onemAlani').style.display='block';
+}
+</script>
 </body>
 </html>
 
